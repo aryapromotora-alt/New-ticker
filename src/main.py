@@ -12,14 +12,18 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'static'))
 app.config['SECRET_KEY'] = 'asdf#FGSgvasgf$5$WGT'
 
+# --- Garantir que a pasta database existe ---
+db_folder = os.path.join(os.path.dirname(__file__), "database")
+os.makedirs(db_folder, exist_ok=True)
+
+# Configuração do banco de dados SQLite
+app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(db_folder, 'app.db')}"
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db.init_app(app)
+
 # Blueprints
 app.register_blueprint(user_bp, url_prefix='/api/users')
 app.register_blueprint(news_bp, url_prefix='/api/news')
-
-# Configuração do banco de dados SQLite
-app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(os.path.dirname(__file__), 'database', 'app.db')}"
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db.init_app(app)
 
 # Cria tabelas automaticamente se não existirem
 with app.app_context():
