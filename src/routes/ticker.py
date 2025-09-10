@@ -14,17 +14,14 @@ def convert_to_rss():
 
     try:
         feed = feedparser.parse(url)
-
-        # Base do Google News (para corrigir os links ./read/...)
-        base_link = "https://news.google.com"
+        base_link = "https://news.google.com"  # corrige ./read/...
 
         rss_items = []
         for entry in feed.entries:
-            # Corrige link relativo -> absoluto
-            raw_link = entry.get("link", "")
-            link = urljoin(base_link, raw_link)
+            # Link absoluto
+            link = urljoin(base_link, entry.get("link", ""))
 
-            # Usa published_parsed ou updated_parsed, senão UTC atual
+            # PubDate sempre em RFC 822 UTC
             if hasattr(entry, "published_parsed") and entry.published_parsed:
                 pub_date = format_datetime(datetime(*entry.published_parsed[:6]))
             elif hasattr(entry, "updated_parsed") and entry.updated_parsed:
