@@ -2,7 +2,7 @@ import feedparser
 from flask import Blueprint, request, Response
 from urllib.parse import urljoin
 from email.utils import format_datetime
-from datetime import datetime
+from datetime import datetime, timezone
 
 ticker_bp = Blueprint("ticker", __name__)
 
@@ -18,16 +18,16 @@ def convert_to_rss():
 
         rss_items = []
         for entry in feed.entries:
-            # Link absoluto
+            # Corrige link relativo
             link = urljoin(base_link, entry.get("link", ""))
 
-            # PubDate sempre em RFC 822 UTC
+            # PubDate sempre em UTC RFC 822
             if hasattr(entry, "published_parsed") and entry.published_parsed:
-                pub_date = format_datetime(datetime(*entry.published_parsed[:6]))
+                pub_date = format_datetime(datetime(*entry.published_parsed[:6], tzinfo=timezone.utc))
             elif hasattr(entry, "updated_parsed") and entry.updated_parsed:
-                pub_date = format_datetime(datetime(*entry.updated_parsed[:6]))
+                pub_date = format_datetime(datetime(*entry.updated_parsed[:6], tzinfo=timezone.utc))
             else:
-                pub_date = format_datetime(datetime.utcnow())
+                pub_date = format_datetime(datetime.now(timezone.utc))
 
             rss_items.append(f"""
                 <item>
@@ -44,7 +44,7 @@ def convert_to_rss():
                 <title>{feed.feed.get("title", "Feed convertido")}</title>
                 <link>{feed.feed.get("link", base_link)}</link>
                 <description>{feed.feed.get("description", "RSS feed convertido")}</description>
-                <lastBuildDate>{format_datetime(datetime.utcnow())}</lastBuildDate>
+                <lastBuildDate>{format_datetime(datetime.now(timezone.utc))}</lastBuildDate>
                 {''.join(rss_items)}
             </channel>
         </rss>"""
