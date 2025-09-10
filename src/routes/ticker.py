@@ -4,7 +4,6 @@ from urllib.parse import urljoin
 from email.utils import format_datetime
 from datetime import datetime
 
-# Cria o Blueprint
 ticker_bp = Blueprint("ticker", __name__)
 
 @ticker_bp.route("/convert", methods=["GET"])
@@ -16,14 +15,20 @@ def convert_to_rss():
     try:
         feed = feedparser.parse(url)
 
+        # Base do Google News (para corrigir os links ./read/...)
+        base_link = "https://news.google.com"
+
         rss_items = []
         for entry in feed.entries:
-            # Corrige links relativos
-            link = urljoin(feed.feed.get("link", url), entry.get("link", ""))
+            # Corrige link relativo -> absoluto
+            raw_link = entry.get("link", "")
+            link = urljoin(base_link, raw_link)
 
-            # Converte published para padrão RSS UTC
-            if "published_parsed" in entry and entry.published_parsed:
+            # Usa published_parsed ou updated_parsed, senão UTC atual
+            if hasattr(entry, "published_parsed") and entry.published_parsed:
                 pub_date = format_datetime(datetime(*entry.published_parsed[:6]))
+            elif hasattr(entry, "updated_parsed") and entry.updated_parsed:
+                pub_date = format_datetime(datetime(*entry.updated_parsed[:6]))
             else:
                 pub_date = format_datetime(datetime.utcnow())
 
@@ -39,8 +44,8 @@ def convert_to_rss():
         rss_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
         <rss version="2.0">
             <channel>
-                <title>{feed.feed.get("title", "No title")}</title>
-                <link>{feed.feed.get("link", url)}</link>
+                <title>{feed.feed.get("title", "Feed convertido")}</title>
+                <link>{feed.feed.get("link", base_link)}</link>
                 <description>{feed.feed.get("description", "RSS feed convertido")}</description>
                 <lastBuildDate>{format_datetime(datetime.utcnow())}</lastBuildDate>
                 {''.join(rss_items)}
