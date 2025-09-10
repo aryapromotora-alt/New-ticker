@@ -1,55 +1,32 @@
-from flask import Blueprint, Response, request
 import requests
-from bs4 import BeautifulSoup
+import feedparser
+from flask import Blueprint, request, jsonify
 
+# Cria o Blueprint
 ticker_bp = Blueprint("ticker", __name__)
 
+# Endpoint de conversão RSS
 @ticker_bp.route("/convert", methods=["GET"])
-def convert():
+def convert_to_rss():
     url = request.args.get("url")
-
     if not url:
-        return {"success": False, "error": "Parâmetro ?url= não fornecido"}, 400
+        return jsonify({"error": "URL is required"}), 400
 
     try:
-        # Faz a requisição ao Google News
-        response = requests.get(url)
-        soup = BeautifulSoup(response.text, "html.parser")
-
-        # Extrai títulos e links básicos
+        feed = feedparser.parse(url)
         items = []
-        for link in soup.find_all("a", href=True)[:10]:
-            title = link.get_text(strip=True)
-            href = link["href"]
+        for entry in feed.entries:
+            items.append({
+                "title": entry.get("title"),
+                "link": entry.get("link"),
+                "published": entry.get("published", "")
+            })
 
-            if href.startswith("./"):
-                href = "https://news.google.com" + href[1:]
-
-            if title and href:
-                items.append({"title": title, "link": href})
-
-        # Monta RSS XML
-        rss_items = ""
-        for item in items:
-            rss_items += f"""
-                <item>
-                    <title>{item['title']}</title>
-                    <link>{item['link']}</link>
-                </item>
-            """
-
-        rss_feed = f"""<?xml version="1.0" encoding="UTF-8" ?>
-            <rss version="2.0">
-                <channel>
-                    <title>Google News RSS</title>
-                    <link>{url}</link>
-                    <description>Feed convertido do Google News</description>
-                    {rss_items}
-                </channel>
-            </rss>
-        """
-
-        return Response(rss_feed, mimetype="application/rss+xml")
+        return jsonify({
+            "feed_title": feed.feed.get("title", "No title"),
+            "feed_link": feed.feed.get("link", ""),
+            "items": items
+        })
 
     except Exception as e:
-        return {"success": False, "error": str(e)}, 500
+        return jsonify({"error": str(e)}), 500
