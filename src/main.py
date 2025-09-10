@@ -2,7 +2,6 @@ import os
 import sys
 from flask import Flask, send_from_directory
 from src.models.user import db
-from src.routes.user import user_bp
 from src.routes.news import news_bp
 
 # DON'T CHANGE THIS !!!
