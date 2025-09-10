@@ -1,97 +1,55 @@
-from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse
-import hashlib
-import json
-import os
+from flask import Blueprint, Response, request
+import requests
+from bs4 import BeautifulSoup
 
-router = APIRouter()
+ticker_bp = Blueprint("ticker", __name__)
 
-# Pasta onde vamos salvar os tickers temporários
-TICKER_STORAGE = "storage/tickers"
-os.makedirs(TICKER_STORAGE, exist_ok=True)
+@ticker_bp.route("/convert", methods=["GET"])
+def convert():
+    url = request.args.get("url")
 
-@router.post("/api/news/ticker")
-async def generate_ticker(request: Request):
-    body = await request.json()
-    items = body.get("items", [])
+    if not url:
+        return {"success": False, "error": "Parâmetro ?url= não fornecido"}, 400
 
-    if not items:
-        return {"success": False, "error": "Nenhuma notícia encontrada"}
+    try:
+        # Faz a requisição ao Google News
+        response = requests.get(url)
+        soup = BeautifulSoup(response.text, "html.parser")
 
-    # Gera um ID único baseado no conteúdo
-    ticker_id = hashlib.md5(json.dumps(items).encode()).hexdigest()
+        # Extrai títulos e links básicos
+        items = []
+        for link in soup.find_all("a", href=True)[:10]:
+            title = link.get_text(strip=True)
+            href = link["href"]
 
-    # Salva em JSON para poder usar no embed
-    filepath = os.path.join(TICKER_STORAGE, f"{ticker_id}.json")
-    with open(filepath, "w", encoding="utf-8") as f:
-        json.dump(items, f, ensure_ascii=False)
+            if href.startswith("./"):
+                href = "https://news.google.com" + href[1:]
 
-    # URL final do ticker
-    ticker_url = f"/embed/ticker/{ticker_id}"
-    return {"success": True, "url": ticker_url}
+            if title and href:
+                items.append({"title": title, "link": href})
 
+        # Monta RSS XML
+        rss_items = ""
+        for item in items:
+            rss_items += f"""
+                <item>
+                    <title>{item['title']}</title>
+                    <link>{item['link']}</link>
+                </item>
+            """
 
-@router.get("/embed/ticker/{ticker_id}", response_class=HTMLResponse)
-async def embed_ticker(ticker_id: str):
-    filepath = os.path.join(TICKER_STORAGE, f"{ticker_id}.json")
+        rss_feed = f"""<?xml version="1.0" encoding="UTF-8" ?>
+            <rss version="2.0">
+                <channel>
+                    <title>Google News RSS</title>
+                    <link>{url}</link>
+                    <description>Feed convertido do Google News</description>
+                    {rss_items}
+                </channel>
+            </rss>
+        """
 
-    if not os.path.exists(filepath):
-        return HTMLResponse("<h3>❌ Ticker não encontrado</h3>", status_code=404)
+        return Response(rss_feed, mimetype="application/rss+xml")
 
-    with open(filepath, "r", encoding="utf-8") as f:
-        items = json.load(f)
-
-    # Gera HTML com ticker animado
-    html_content = f"""
-    <!DOCTYPE html>
-    <html lang="pt-BR">
-    <head>
-        <meta charset="UTF-8">
-        <title>Ticker de Notícias</title>
-        <style>
-            body {{
-                margin: 0;
-                overflow: hidden;
-            }}
-            .ticker {{
-                background: black;
-                color: white;
-                font-family: Arial, sans-serif;
-                white-space: nowrap;
-                overflow: hidden;
-                box-sizing: border-box;
-                width: 100%;
-                height: 40px;
-                line-height: 40px;
-            }}
-            .ticker-content {{
-                display: inline-block;
-                padding-left: 100%;
-                animation: scroll 40s linear infinite;
-            }}
-            @keyframes scroll {{
-                0% {{ transform: translateX(0); }}
-                100% {{ transform: translateX(-100%); }}
-            }}
-            .news-item {{
-                margin-right: 60px;
-                color: #fff;
-            }}
-            .source {{
-                color: #00bfff;
-                font-weight: bold;
-                margin-right: 5px;
-            }}
-        </style>
-    </head>
-    <body>
-        <div class="ticker">
-            <div class="ticker-content">
-                {''.join([f"<span class='news-item'><span class='source'>{i['source']}</span>{i['title']}</span>" for i in items])}
-            </div>
-        </div>
-    </body>
-    </html>
-    """
-
-    return HTMLResponse(html_content)
+    except Exception as e:
+        return {"success": False, "error": str(e)}, 500
