@@ -7,7 +7,6 @@ from datetime import datetime
 # Cria o Blueprint
 ticker_bp = Blueprint("ticker", __name__)
 
-# Endpoint de conversão RSS
 @ticker_bp.route("/convert", methods=["GET"])
 def convert_to_rss():
     url = request.args.get("url")
@@ -17,13 +16,12 @@ def convert_to_rss():
     try:
         feed = feedparser.parse(url)
 
-        # Cabeçalho do XML RSS
         rss_items = []
         for entry in feed.entries:
-            # Constrói link absoluto (caso venha ./read/...)
+            # Corrige links relativos
             link = urljoin(feed.feed.get("link", url), entry.get("link", ""))
 
-            # pubDate formatado para padrão RSS
+            # Converte published para padrão RSS UTC
             if "published_parsed" in entry and entry.published_parsed:
                 pub_date = format_datetime(datetime(*entry.published_parsed[:6]))
             else:
