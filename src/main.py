@@ -4,7 +4,7 @@ from flask import Flask, send_from_directory
 from src.models.user import db
 from src.routes.news import news_bp
 from src.routes.user import user_bp   # importa o blueprint de usuários
-from src.routes import ticker
+from src.routes.ticker import ticker_bp
 
 # DON'T CHANGE THIS !!!
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -25,6 +25,8 @@ db.init_app(app)
 # Blueprints
 app.register_blueprint(user_bp, url_prefix='/api/users')
 app.register_blueprint(news_bp, url_prefix='/api/news')
+app.register_blueprint(ticker_bp, url_prefix='/api/ticker')
+
 
 # Cria tabelas automaticamente se não existirem
 with app.app_context():
