@@ -96,12 +96,12 @@
     <div class="container">
         <div class="header">
             <h1>📰 Conversor Google News</h1>
-            <p>Transforme links do Google News em RSS Feed Ticker</p>
+            <p>Transforme palavras-chave em RSS Feed Ticker</p>
         </div>
 
         <div class="form-section">
             <div class="input-group">
-                <input type="url" class="url-input" id="newsUrl" placeholder="Cole aqui o link do Google News..." required>
+                <input type="text" class="url-input" id="newsUrl" placeholder="Digite uma palavra-chave (ex: política, esporte...)" required>
                 <button class="convert-btn" id="convertBtn" onclick="convertNews()">Converter</button>
             </div>
 
@@ -138,9 +138,9 @@
             const tickerContainer = document.getElementById('tickerContainer');
             const rssOutput = document.getElementById('rssOutput');
 
-            const url = urlInput.value.trim();
-            if (!url) {
-                showError('Por favor, insira um URL válido do Google News.');
+            const query = urlInput.value.trim();
+            if (!query) {
+                showError('Por favor, insira uma palavra-chave.');
                 return;
             }
 
@@ -151,7 +151,7 @@
             rssOutput.style.display = 'none';
 
             try {
-                const response = await fetch(`/api/ticker/convert?url=${encodeURIComponent(url)}`);
+                const response = await fetch(`/api/ticker/convert?q=${encodeURIComponent(query)}`);
                 const rssContent = await response.text();
 
                 if (rssContent.includes("<item>")) {
