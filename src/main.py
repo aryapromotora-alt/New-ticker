@@ -10,7 +10,7 @@ from src.routes.ticker import ticker_bp
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 # Cria a aplicação Flask
-app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'static'))
+app = Flask(__name__, static_folder="static", static_url_path="")
 app.config['SECRET_KEY'] = 'asdf#FGSgvasgf$5$WGT'
 
 # --- Garantir que a pasta database existe ---
@@ -27,7 +27,6 @@ app.register_blueprint(user_bp, url_prefix='/api/users')
 app.register_blueprint(news_bp, url_prefix='/api/news')
 app.register_blueprint(ticker_bp, url_prefix='/api/ticker')
 
-
 # Cria tabelas automaticamente se não existirem
 with app.app_context():
     db.create_all()
@@ -36,21 +35,11 @@ with app.app_context():
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve(path):
-    static_folder_path = app.static_folder
-    if static_folder_path is None:
-        return "Static folder not configured", 404
-
-    if path != "" and os.path.exists(os.path.join(static_folder_path, path)):
-        return send_from_directory(static_folder_path, path)
+    if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
+        return send_from_directory(app.static_folder, path)
     else:
-        index_path = os.path.join(static_folder_path, 'index.html')
-        if os.path.exists(index_path):
-            return send_from_directory(static_folder_path, 'index.html')
-        else:
-            return "index.html not found", 404
-
+        return send_from_directory(app.static_folder, 'index.html')
 
 if __name__ == '__main__':
-    # Render define a porta via variável de ambiente
     port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    app.run(host='0.0.0.0', port=port)  # Debug desativado para produção
