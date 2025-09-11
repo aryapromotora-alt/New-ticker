@@ -7,7 +7,7 @@ from xml.sax.saxutils import escape
 ticker_bp = Blueprint("ticker", __name__)
 
 # Coloque sua chave da GNews API aqui
-GNEWS_API_KEY = "SUA_API_KEY_AQUI"
+GNEWS_API_KEY = "5e9d7297212a7bfb8d6ff360e51bcacf"
 
 def fetch_news_from_gnews(query=None, country="br", lang="pt", max_results=10):
     """Busca notícias usando a API oficial GNews."""
